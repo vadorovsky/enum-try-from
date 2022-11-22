@@ -1,0 +1,13 @@
+[package]
+name = "enum-try-from"
+version = "0.0.1"
+description = "Rust macros which create enums with TryFrom trait implementations"
+keywords = ["enum", "tryfrom", "primitive", "integer", "conversion"]
+license = "MIT"
+authors = ["Michal Rostecki <vadorovsky@gmail.com>"]
+repository = "https://github.com/vadorovsky/enum-try-from"
+readme = "README.md"
+edition = "2021"
+
+[dev-dependencies]
+thiserror = "1.0"
