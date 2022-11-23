@@ -180,14 +180,14 @@
 ///     },
 ///     u16,
 ///     MyError,
-///     MyError::InvalidValue
+///     MyError::InvalidValue,
 /// );
 /// ```
 #[macro_export]
 macro_rules! impl_enum_try_from {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
         $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
-    }, $type:ty, $err_ty:ty, $err:expr) => {
+    }, $type:ty, $err_ty:ty, $err:expr $(,)?) => {
         $(#[$meta])*
         $vis enum $name {
             $($(#[$vmeta])* $vname $(= $val)?,)*
@@ -267,14 +267,14 @@ macro_rules! impl_enum_try_from {
 ///     },
 ///     u16,
 ///     MyError,
-///     MyError::InvalidValue
+///     MyError::InvalidValue,
 /// );
 /// ```
 #[macro_export]
 macro_rules! impl_enum_try_from_be {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
         $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
-    }, $type:ty, $err_ty:ty, $err:expr) => {
+    }, $type:ty, $err_ty:ty, $err:expr $(,)?) => {
         $(#[$meta])*
         $vis enum $name {
             $($(#[$vmeta])* $vname $(= $val)?,)*
