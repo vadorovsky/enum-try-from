@@ -33,8 +33,32 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum MyError {
-   #[error("invalid value")]
-   InvalidValue,
+    #[error("invalid value")]
+    InvalidValue,
+}
+
+impl_enum_try_from!(
+    #[repr(u16)]
+    #[derive(PartialEq, Eq, Debug)]
+    enum MyEnum {
+        Foo = 0,
+        Bar = 1,
+        Baz = 2,
+    },
+    u16,
+    MyError,
+    MyError::InvalidValue
+);
+```
+
+```rust
+use enum_try_into::impl_enum_try_from;
+use thiserror::Error;
+
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum MyError {
+   #[error("invalid value: {0}")]
+   InvalidValue(u16),
 }
 
 impl_enum_try_from!(

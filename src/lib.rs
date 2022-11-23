@@ -50,6 +50,30 @@
 //! );
 //! ```
 //!
+//! ```rust
+//! use enum_try_from::impl_enum_try_from;
+//! use thiserror::Error;
+//!
+//! #[derive(Error, Debug, PartialEq, Eq)]
+//! pub enum MyError {
+//!    #[error("invalid value: {0}")]
+//!    InvalidValue(u16),
+//! }
+//!
+//! impl_enum_try_from!(
+//!     #[repr(u16)]
+//!     #[derive(PartialEq, Eq, Debug)]
+//!     enum MyEnum {
+//!         Foo = 0,
+//!         Bar = 1,
+//!         Baz = 2,
+//!     },
+//!     u16,
+//!     MyError,
+//!     MyError::InvalidValue
+//! );
+//! ```
+//!
 //! If the value provided to `try_from` should be converted from big endian:
 //!
 //! ```rust
@@ -137,6 +161,8 @@
 ///
 /// # Examples
 ///
+/// ## Unit `()` error
+///
 /// ```
 /// # use enum_try_from::impl_enum_try_from;
 /// impl_enum_try_from!(
@@ -159,6 +185,8 @@
 /// assert_eq!(MyEnum::try_from(3), Err(()));
 /// # }
 /// ```
+///
+/// ## Unit variant
 ///
 /// ```
 /// use thiserror::Error;
@@ -183,6 +211,65 @@
 ///     MyError::InvalidValue
 /// );
 /// ```
+///
+/// ## Tuple variant
+///
+/// ```
+/// use thiserror::Error;
+/// # use enum_try_from::impl_enum_try_from;
+///
+/// #[derive(Error, Debug, PartialEq, Eq)]
+/// pub enum MyError {
+///    #[error("invalid value: {0}")]
+///    InvalidValue(u16),
+/// }
+///
+/// impl_enum_try_from!(
+///     #[repr(u16)]
+///     #[derive(PartialEq, Eq, Debug)]
+///     enum MyEnum {
+///         Foo = 0,
+///         Bar = 1,
+///         Baz = 2,
+///     },
+///     u16,
+///     MyError,
+///     MyError::InvalidValue
+/// );
+/// #
+/// # fn main() {
+/// assert_eq!(MyEnum::try_from(0), Ok(MyEnum::Foo));
+/// assert_eq!(MyEnum::try_from(1), Ok(MyEnum::Bar));
+/// assert_eq!(MyEnum::try_from(2), Ok(MyEnum::Baz));
+/// assert_eq!(MyEnum::try_from(3), Err(MyError::InvalidValue(3)));
+/// # }
+/// ```
+///
+/// ## Closure
+///
+/// ```
+/// # use enum_try_from::impl_enum_try_from;
+///
+/// impl_enum_try_from!(
+///     #[repr(u16)]
+///     #[derive(PartialEq, Eq, Debug)]
+///     enum MyEnum {
+///         Foo = 0,
+///         Bar = 1,
+///         Baz = 2,
+///     },
+///     u16,
+///     u16,
+///     |value| value + 5
+/// );
+/// #
+/// # fn main() {
+/// assert_eq!(MyEnum::try_from(0), Ok(MyEnum::Foo));
+/// assert_eq!(MyEnum::try_from(1), Ok(MyEnum::Bar));
+/// assert_eq!(MyEnum::try_from(2), Ok(MyEnum::Baz));
+/// assert_eq!(MyEnum::try_from(3), Err(8));
+/// # }
+/// ```
 #[macro_export]
 macro_rules! impl_enum_try_from {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
@@ -197,9 +284,19 @@ macro_rules! impl_enum_try_from {
             type Error = $err_ty;
 
             fn try_from(v: $type) -> Result<Self, Self::Error> {
+                trait IntoError {
+                    fn into_error(self, value: $type) -> $err_ty;
+                }
+                impl IntoError for $err_ty {
+                    fn into_error(self, _: $type) -> $err_ty { self }
+                }
+                impl<F: FnOnce($type) -> $err_ty > IntoError for F {
+                    fn into_error(self, value: $type) -> $err_ty { self(value) }
+                }
+
                 match v {
                     $(x if x == $name::$vname as $type => Ok($name::$vname),)*
-                    _ => Err($err),
+                    _ => Err($err.into_error(v)),
                 }
             }
         }
@@ -253,8 +350,8 @@ macro_rules! impl_enum_try_from {
 ///
 /// #[derive(Error, Debug, PartialEq, Eq)]
 /// pub enum MyError {
-///     #[error("invalid value")]
-///     InvalidValue,
+///     #[error("invalid value: {0}")]
+///     InvalidValue(u16),
 /// }
 ///
 /// impl_enum_try_from_be!(
@@ -269,6 +366,13 @@ macro_rules! impl_enum_try_from {
 ///     MyError,
 ///     MyError::InvalidValue
 /// );
+///
+/// # fn main() {
+/// # assert_eq!(MyEnum::try_from(0x3412), Ok(MyEnum::Foo));
+/// # assert_eq!(MyEnum::try_from(0x7856), Ok(MyEnum::Bar));
+/// # assert_eq!(MyEnum::try_from(0xbc9a), Ok(MyEnum::Baz));
+/// assert_eq!(MyEnum::try_from(0xdef0), Err(MyError::InvalidValue(0xdef0)));
+/// # }
 /// ```
 #[macro_export]
 macro_rules! impl_enum_try_from_be {
@@ -284,10 +388,18 @@ macro_rules! impl_enum_try_from_be {
             type Error = $err_ty;
 
             fn try_from(v: $type) -> Result<Self, Self::Error> {
-                let v = <$type>::from_be(v);
-                match v {
+                trait IntoError {
+                    fn into_error(self, value: $type) -> $err_ty;
+                }
+                impl IntoError for $err_ty {
+                    fn into_error(self, _: $type) -> $err_ty { self }
+                }
+                impl<F: FnOnce($type) -> $err_ty > IntoError for F {
+                    fn into_error(self, value: $type) -> $err_ty { self(value) }
+                }
+                match <$type>::from_be(v) {
                     $(x if x == $name::$vname as $type => Ok($name::$vname),)*
-                    _ => Err($err),
+                    _ => Err($err.into_error(v)),
                 }
             }
         }
